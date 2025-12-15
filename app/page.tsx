@@ -53,15 +53,28 @@ function EditableText({
     }
   }
 
+  // Stop propagation to prevent ReactFlow from intercepting clicks
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation()
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+  }
+
   return (
     <span
       contentEditable
       suppressContentEditableWarning
       onBlur={handleBlur}
-      className={className}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
+      className={`nodrag nowheel ${className}`}
       style={{ 
         outline: "none",
         cursor: "text",
+        minWidth: "20px",
+        display: "inline-block",
         ...style 
       }}
     >
@@ -536,8 +549,19 @@ const initialEdges: Edge[] = [
 export default function PrismaFlowDiagram() {
   const flowRef = useRef<HTMLDivElement>(null)
   
-  // Function to update node data
+  // Create a ref to hold the updateNodeData function
+  const updateNodeDataRef = useRef<(nodeId: string, newData: Record<string, unknown>) => void>(() => {})
+  
+  // Wrapper function that calls the ref
   const updateNodeData = useCallback((nodeId: string, newData: Record<string, unknown>) => {
+    updateNodeDataRef.current(nodeId, newData)
+  }, [])
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes(updateNodeData))
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  
+  // Update the ref with the actual implementation after setNodes is available
+  updateNodeDataRef.current = useCallback((nodeId: string, newData: Record<string, unknown>) => {
     setNodes((nds: Node[]) =>
       nds.map((node: Node) => {
         if (node.id === nodeId) {
@@ -546,17 +570,14 @@ export default function PrismaFlowDiagram() {
             data: {
               ...node.data,
               ...newData,
-              updateNodeData, // Keep the function reference
+              updateNodeData, // Keep the stable function reference
             },
           }
         }
         return node
       })
     )
-  }, [])
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes(updateNodeData))
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  }, [setNodes, updateNodeData])
 
   // Export functions
   const exportToPNG = async () => {

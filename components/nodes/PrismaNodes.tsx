@@ -23,16 +23,29 @@ export function EditableText({ value, onChange, className = "", style = {} }: Ed
     }
   }, [onChange, value])
 
+  // Stop propagation to prevent ReactFlow from intercepting clicks
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
   return (
     <span
       ref={ref}
       contentEditable
       suppressContentEditableWarning
       onBlur={handleBlur}
-      className={className}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
+      className={`nodrag nowheel ${className}`}
       style={{ 
         outline: "none",
         cursor: "text",
+        minWidth: "20px",
+        display: "inline-block",
         ...style 
       }}
     >
@@ -83,7 +96,7 @@ export const PhaseLabelNode = memo(({ data }: NodeProps) => {
       >
         <EditableText 
           value={data.label as string}
-          onChange={(v) => data.onLabelChange?.(v)}
+          onChange={(v) => { if (typeof data.onLabelChange === 'function') data.onLabelChange(v) }}
         />
       </div>
     </div>
@@ -107,62 +120,62 @@ export const ContentBoxNode = memo(({ data }: NodeProps) => {
       <Handle type="source" position={Position.Bottom} style={{ background: colors.slate700 }} />
       <Handle type="source" position={Position.Right} id="right" style={{ background: colors.slate700 }} />
       
-      {data.title && (
+      {typeof data.title === 'string' && (
         <div className="font-semibold mb-3">
           <EditableText 
             value={data.title as string}
-            onChange={(v) => data.onTitleChange?.(v)}
+            onChange={(v) => { if (typeof data.onTitleChange === 'function') data.onTitleChange(v) }}
           />
         </div>
       )}
       
-      {data.items && (data.items as Array<{name: string, count: string}>).map((item, idx) => (
+      {Array.isArray(data.items) && (data.items as Array<{name: string, count: string}>).map((item, idx) => (
         <div key={idx}>
           <EditableText 
             value={item.name}
-            onChange={(v) => data.onItemChange?.(idx, "name", v)}
+            onChange={(v) => { if (typeof data.onItemChange === 'function') data.onItemChange(idx, "name", v) }}
           />
           {" ("}
           <EditableText 
             value={item.count}
-            onChange={(v) => data.onItemChange?.(idx, "count", v)}
+            onChange={(v) => { if (typeof data.onItemChange === 'function') data.onItemChange(idx, "count", v) }}
           />
           {")"}
         </div>
       ))}
       
-      {data.totalLabel && (
+      {typeof data.totalLabel === 'string' && (
         <div className="font-semibold mt-2">
           <EditableText 
             value={data.totalLabel as string}
-            onChange={(v) => data.onTotalLabelChange?.(v)}
+            onChange={(v) => { if (typeof data.onTotalLabelChange === 'function') data.onTotalLabelChange(v) }}
           />
           {" ("}
           <EditableText 
             value={data.total as string}
-            onChange={(v) => data.onTotalChange?.(v)}
+            onChange={(v) => { if (typeof data.onTotalChange === 'function') data.onTotalChange(v) }}
           />
           {")"}
         </div>
       )}
       
-      {data.mainLabel && (
+      {typeof data.mainLabel === 'string' && (
         <span className="font-semibold">
           <EditableText 
             value={data.mainLabel as string}
-            onChange={(v) => data.onMainLabelChange?.(v)}
+            onChange={(v) => { if (typeof data.onMainLabelChange === 'function') data.onMainLabelChange(v) }}
           />
         </span>
       )}
       
-      {data.showN && (
+      {data.showN === true && (
         <>
           {" ("}
           <span className="italic">n</span>
           {" = "}
           <EditableText 
             value={data.count as string}
-            onChange={(v) => data.onCountChange?.(v)}
+            onChange={(v) => { if (typeof data.onCountChange === 'function') data.onCountChange(v) }}
           />
           {")"}
         </>
@@ -189,34 +202,34 @@ export const ExcludedBoxNode = memo(({ data }: NodeProps) => {
       <div className="font-semibold mb-2">
         <EditableText 
           value={data.title as string}
-          onChange={(v) => data.onTitleChange?.(v)}
+          onChange={(v) => { if (typeof data.onTitleChange === 'function') data.onTitleChange(v) }}
         />
-        {data.showTitleCount && (
+        {data.showTitleCount === true && (
           <>
             {" (n="}
             <EditableText 
               value={data.titleCount as string}
-              onChange={(v) => data.onTitleCountChange?.(v)}
+              onChange={(v) => { if (typeof data.onTitleCountChange === 'function') data.onTitleCountChange(v) }}
             />
             {")"}
           </>
         )}
       </div>
       
-      {data.reasons && (
+      {Array.isArray(data.reasons) && (
         <div className="space-y-1 text-sm">
           {(data.reasons as Array<{reason: string, count: string}>).map((item, idx) => (
             <div key={idx}>
               <EditableText 
                 value={item.reason}
-                onChange={(v) => data.onReasonChange?.(idx, "reason", v)}
+                onChange={(v) => { if (typeof data.onReasonChange === 'function') data.onReasonChange(idx, "reason", v) }}
               />
               {" ("}
               <span className="italic">n</span>
               {" = "}
               <EditableText 
                 value={item.count}
-                onChange={(v) => data.onReasonChange?.(idx, "count", v)}
+                onChange={(v) => { if (typeof data.onReasonChange === 'function') data.onReasonChange(idx, "count", v) }}
               />
               {")"}
             </div>
@@ -224,14 +237,14 @@ export const ExcludedBoxNode = memo(({ data }: NodeProps) => {
         </div>
       )}
       
-      {!data.reasons && data.showN && (
+      {!Array.isArray(data.reasons) && data.showN === true && (
         <>
           {"("}
           <span className="italic">n</span>
           {" = "}
           <EditableText 
             value={data.count as string}
-            onChange={(v) => data.onCountChange?.(v)}
+            onChange={(v) => { if (typeof data.onCountChange === 'function') data.onCountChange(v) }}
           />
           {")"}
         </>
@@ -259,7 +272,7 @@ export const SmallBoxNode = memo(({ data }: NodeProps) => {
       <div className="font-semibold mb-1">
         <EditableText 
           value={data.label as string}
-          onChange={(v) => data.onLabelChange?.(v)}
+          onChange={(v) => { if (typeof data.onLabelChange === 'function') data.onLabelChange(v) }}
         />
       </div>
       <div>
@@ -268,7 +281,7 @@ export const SmallBoxNode = memo(({ data }: NodeProps) => {
         {" = "}
         <EditableText 
           value={data.count as string}
-          onChange={(v) => data.onCountChange?.(v)}
+          onChange={(v) => { if (typeof data.onCountChange === 'function') data.onCountChange(v) }}
         />
         {")"}
       </div>
